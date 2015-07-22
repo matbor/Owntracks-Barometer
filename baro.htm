@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Owntracks Barometric Pressure Monitor</title>
+	<script src="mqttws31.js" type="text/javascript"></script>
+	
+<style type="text/css" media="screen">
+	img.bar
+	{
+		visibility:hidden;
+	}
+
+</style>
+
+<script type="text/javascript" language="javascript" charset="utf-8">
+// by Matthew Bordignon, @bordignon on Twitter, June 2015
+// Used to demostrate owntracks barometer pressure value at the altitude of the phone6, not at sea level
+//
+// modified from original source; http://starter-kit.nettigo.eu/2011/p4a-php-for-arduino-part-2/
+
+    var MQTTbroker = 'mqtt.localdomain'; // need websockets enabled on broker
+	var MQTTport = 8000; 
+	var MQTTsubTopic = 'owntracks/johnny/iphone6';
+
+    // Create a client instance
+    client = new Paho.MQTT.Client(MQTTbroker, MQTTport, "clientId");
+    
+    // set callback handlers
+    client.onConnectionLost = onConnectionLost;
+    client.onMessageArrived = onMessageArrived;
+    
+    // connect the client
+    client.connect({onSuccess:onConnect});
+    
+    
+    // called when the client connects
+    function onConnect() {
+      // Once a connection has been made, make a subscription and send a message.
+      console.log("onConnect");
+      client.subscribe(MQTTsubTopic);
+      //message = new Paho.MQTT.Message("Hello");
+      //message.destinationName = "/World";
+      //client.send(message); 
+    }
+    
+    // called when the client loses its connection
+    function onConnectionLost(responseObject) {
+      if (responseObject.errorCode !== 0) {
+        console.log("onConnectionLost:"+responseObject.errorMessage);
+      }
+    }
+    
+    // called when a message arrives
+    function onMessageArrived(message) {
+      console.log("onMessageArrived:"+message.payloadString);
+      var myJSON = JSON.parse(message.payloadString);
+      //convert from kPa to hPa. hPa = kPa * 10
+      var hpaVal = myJSON.p * 10;
+      console.log(hpaVal);
+      draw(hpaVal);
+    }
+
+
+	function image(ctx, idname, x, y)
+	{
+		var img = document.getElementById(idname);
+		ctx.drawImage(img, x, y);
+	}
+	
+	function hand(ctx, value)
+	{
+		ctx.save();
+		ctx.rotate(value);
+		image(ctx, 'hand', -122, -22);
+		ctx.restore();
+	}
+	
+	function shadow(ctx, value)
+	{
+		ctx.save();
+		ctx.translate(5, 5);
+		ctx.save();
+		ctx.rotate(value);
+		image(ctx, 'shadow', -122, -22);
+		ctx.restore();
+		ctx.restore();
+	}
+	
+	function icon(ctx, value)
+	{
+		if (value < 1000)
+		{
+			image(ctx, 'rain', -82, 20);
+		}
+		else if (value < 1030)
+		{
+			image(ctx, 'cloudy', -82, 20);
+		}
+		else
+		{
+			image(ctx, 'sun', -82, 20);
+		}
+	}
+	
+	function draw(value)
+	{
+		var canvas = document.getElementById('barometr');
+		if (canvas.getContext)
+		{
+			angle = Math.PI * 2 * (0.005 * value - 4.207);
+			var ctx = canvas.getContext('2d');
+			ctx.save();
+			ctx.translate(240, 240);
+			image(ctx, 'face', -240, -240);
+			icon(ctx, value);
+			shadow(ctx, angle);
+			hand(ctx, angle);
+			ctx.restore();
+		}
+	}
+
+</script>
+</head>
+<body onload="draw();">
+<canvas id="barometr" width="480" height="480">800 hPa</canvas>
+
+<img src="face.png" id="face" class="bar"/>
+<img src="cloudy.png" id="cloudy" class="bar"/>
+<img src="sun.png" id="sun" class="bar"/>
+<img src="rain.png" id="rain" class="bar"/>
+<img src="hand.png" id="hand" class="bar"/>
+<img src="shadow.png" id="shadow" class="bar"/>
+
+</body>
+</html>
+
